@@ -1,0 +1,23 @@
+[
+  {
+    "manufacturer": "LightReach",
+    "model_pattern": "*",
+    "isDomestic": true,
+    "approved_sku": "",
+    "spec_url": "/specs/LightReach_Current_AVL.pdf"
+  },
+  {
+    "manufacturer": "Eaton",
+    "model_pattern": "BR220",
+    "isDomestic": true,
+    "approved_sku": "EATON BR220 - (20A)",
+    "spec_url": "/specs/EATON_BR220_20A.pdf"
+  },
+  {
+    "manufacturer": "Schneider",
+    "model_pattern": "Square D Homeline*",
+    "isDomestic": false,
+    "approved_sku": "",
+    "spec_url": "/specs/Schneider_SquareD_Homeline.pdf"
+  }
+]

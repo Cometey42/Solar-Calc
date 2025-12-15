@@ -10,7 +10,7 @@ services:
       MYSQL_USER: solar_user
       MYSQL_PASSWORD: solar_password
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/prisma/migrations:/docker-entrypoint-initdb.d

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 
+// Server component only; no client hooks.
 export default function Home() {
   return (
     <main

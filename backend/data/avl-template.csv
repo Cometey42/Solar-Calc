@@ -1,0 +1,4 @@
+manufacturer,model_pattern,isDomestic,approved_sku,spec_url
+Eaton,BR220,true,EATON BR220 - (20A),/specs/EATON_BR220_20A.pdf
+Schneider,Square D Homeline,false,,/specs/Schneider_SquareD_Homeline.pdf
+Generic,Inverter X*,true,GEN-INVX-5000W,

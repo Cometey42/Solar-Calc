@@ -1,4 +1,3 @@
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export function fetchProjects({ page = 1, perPage = 10 } = {}) {
@@ -18,13 +17,13 @@ export function fetchDesignDetails(designId) {
         });
 }
 
-export async function fetchParts ({ page = 1, parts = [] } = {}) {
-    const response = await fetch(`${API_BASE_URL}/search?page=${page}&page_size=50${arguments[0]?.search ? `&q=${encodeURIComponent(arguments[0].search)}` : ''}`)
+export async function fetchParts({ page = 1, parts = [] } = {}) {
+    const response = await fetch(`${API_BASE_URL}/search?page=${page}&page_size=50${arguments[0]?.search ? `&q=${encodeURIComponent(arguments[0].search)}` : ''}`);
     if (response.ok) {
-        const data = await response.json()
-        parts = [...parts, ...data.items]
-        return { parts, hasMore: data.has_more }
+        const data = await response.json();
+        parts = [...parts, ...data.items];
+        return { parts, hasMore: data.has_more };
     } else {
-        throw new Error ("Failed to fetch parts")
+        throw new Error("Failed to fetch parts");
     }
-} 
+}

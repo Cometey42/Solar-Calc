@@ -15,6 +15,9 @@ model Part {
   weightKg      Float?
   originCountry String   @default("UNKNOWN")
   isDomestic    Boolean  @default(false)
+
+  @@index([sku])
+  @@index([name])
 }
 
 model ComponentMap {

@@ -20,15 +20,37 @@ function parsePrice(val) {
 
 async function main() {
   // ---- read mapping + workbook ----
+  // mapping file is optional; default headings if missing
+  const defaultMap = {
+    sheetName: "Sheet1",
+    columns: {
+      sku: "Product Number",
+      brand: "Brand",
+      partType: "Part Type",
+      price: "Price",
+      domestic: "Domestic (D) / Non-Domestic (ND) / Domestic",
+    },
+  };
   const mappingPath = path.join(process.cwd(), "data", "raw", "mapping.json");
-  if (!fs.existsSync(mappingPath)) throw new Error(`Missing mapping file: ${mappingPath}`);
-  const map = JSON.parse(fs.readFileSync(mappingPath, "utf8"));
+  const map = fs.existsSync(mappingPath)
+    ? JSON.parse(fs.readFileSync(mappingPath, "utf8"))
+    : defaultMap;
 
-  const xlsxPath = path.join(process.cwd(), "data", "raw", "material list (1).xlsx");
-  if (!fs.existsSync(xlsxPath)) throw new Error(`Missing Excel: ${xlsxPath}`);
+  // Look for the Excel file in both /data and /data/raw
+  const xlsxCandidates = [
+    path.join(process.cwd(), "data", "material list.xlsx"),
+    path.join(process.cwd(), "data", "material_list.xlsx"),
+    path.join(process.cwd(), "data", "materials.xlsx"),
+    path.join(process.cwd(), "data", "raw", "material list.xlsx"),
+    path.join(process.cwd(), "data", "raw", "material_list.xlsx"),
+    path.join(process.cwd(), "data", "raw", "materials.xlsx"),
+  ];
+  const xlsxPath = xlsxCandidates.find((p) => fs.existsSync(p));
+  if (!xlsxPath) throw new Error(`Missing Excel file. Expected one of: ${xlsxCandidates.join(", ")}`);
 
   const wb = XLSX.readFile(xlsxPath);
-  const wsName = typeof map.sheetName === "number" ? wb.SheetNames[map.sheetName] : map.sheetName;
+  const cfg = map || defaultMap;
+  const wsName = typeof cfg.sheetName === "number" ? wb.SheetNames[cfg.sheetName] : cfg.sheetName;
   const ws = wb.Sheets[wsName];
   if (!ws) throw new Error(`Sheet not found: ${wsName}`);
 
@@ -37,11 +59,11 @@ async function main() {
   if (!rows.length) throw new Error("Sheet has no rows.");
 
   const requiredHeaders = [
-    map.columns.sku,
-    map.columns.brand,
-    map.columns.partType,
-    map.columns.price,
-    map.columns.domestic,
+    cfg.columns.sku,
+    cfg.columns.brand,
+    cfg.columns.partType,
+    cfg.columns.price,
+    cfg.columns.domestic,
   ].map((h) => (h || "").toString().trim());
 
   const headerRowIndex = rows.findIndex((row) => {
@@ -59,11 +81,11 @@ async function main() {
 
   const headerRow = rows[headerRowIndex].map((c) => (c == null ? "" : String(c).trim()));
   const idx = {
-    sku: headerRow.indexOf(map.columns.sku),
-    brand: headerRow.indexOf(map.columns.brand),
-    partType: headerRow.indexOf(map.columns.partType),
-    price: headerRow.indexOf(map.columns.price),
-    domestic: headerRow.indexOf(map.columns.domestic),
+    sku: headerRow.indexOf(cfg.columns.sku),
+    brand: headerRow.indexOf(cfg.columns.brand),
+    partType: headerRow.indexOf(cfg.columns.partType),
+    price: headerRow.indexOf(cfg.columns.price),
+    domestic: headerRow.indexOf(cfg.columns.domestic),
   };
 
   let created = 0, updated = 0, skipped = 0;

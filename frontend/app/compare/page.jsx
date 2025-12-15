@@ -81,61 +81,6 @@ export default function ComparePage() {
           )
         })}
       </ul>
-
-      {designDetails && (
-        <div className="mt-8 p-4 border rounded-lg" aria-live="polite">
-          <h2 className="text-xl font-semibold mb-2">Design Details</h2>
-          <div className="mb-2">Design ID: {designDetails.design_id}</div>
-          <div className="mb-2">Pricing Method: {designDetails.pricing_method ?? "N/A"}</div>
-          <div className="mb-2">Price Per Watt: {designDetails.ppw ?? "N/A"}</div>
-          <div className="mb-2">Base System Price: ${designDetails.base_system_price ?? "N/A"}</div>
-          <div className="mb-2">Component Count: {designDetails.component_count ?? 0}</div>
-          {designDetails.preview_url && (
-            <img
-              src={designDetails.preview_url}
-              alt={`Preview of ${designDetails.design_id}`}
-              className="my-4 max-w-full h-auto"
-            />
-          )}
-          <h3 className="font-semibold mt-4 mb-2">Component Breakdown</h3>
-          <table className="w-full text-sm border">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="p-2">Name</th>
-                <th className="p-2">Manufacturer</th>
-                <th className="p-2">Type</th>
-                <th className="p-2">Quantity</th>
-                <th className="p-2">SKU</th>
-                <th className="p-2">Unit Price</th>
-                <th className="p-2">Origin</th>
-                <th className="p-2">Domestic?</th>
-                <th className="p-2">Line Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {designDetails.items?.map((item, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="p-2">{item.name}</td>
-                  <td className="p-2">{item.manufacturer}</td>
-                  <td className="p-2">{item.type}</td>
-                  <td className="p-2">{item.quantity}</td>
-                  <td className="p-2">{item.matched_sku}</td>
-                  <td className="p-2">{item.unit_price ?? "N/A"}</td>
-                  <td className="p-2">{item.origin_country ?? "N/A"}</td>
-                  <td className="p-2">{item.is_domestic ? "Yes" : item.is_domestic === false ? "No" : "Unknown"}</td>
-                  <td className="p-2">{item.line_total ?? "N/A"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-4">
-            <span className="font-semibold">Totals:</span>
-            <span className="ml-2 text-green-700">Domestic: ${designDetails.summary?.domestic_total ?? "N/A"}</span>
-            <span className="ml-2 text-red-700">Non-Domestic: ${designDetails.summary?.non_domestic_total ?? "N/A"}</span>
-            <span className="ml-2 text-gray-700">Unknown: ${designDetails.summary?.unknown_total ?? "N/A"}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

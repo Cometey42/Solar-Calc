@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback } from 'react';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { fetchParts } from '../../api'
@@ -93,6 +93,46 @@ export default function PartsPicker() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const PARTS_PER_PAGE = 5
+
+  const topRef = useRef(null)
+  const didMountRef = useRef(false)
+  const scrollToTop = () => {
+    const htmlEl = (typeof document !== 'undefined') ? document.documentElement : null
+    const bodyEl = (typeof document !== 'undefined') ? document.body : null
+    const prevHtmlBehavior = htmlEl ? htmlEl.style.scrollBehavior : ''
+    const prevBodyBehavior = bodyEl ? bodyEl.style.scrollBehavior : ''
+    try {
+      const active = document.activeElement
+      if (active && typeof active.blur === 'function') active.blur()
+    } catch {}
+    // Force instant jump even if global CSS sets smooth scrolling
+    try {
+      if (htmlEl) htmlEl.style.scrollBehavior = 'auto'
+      if (bodyEl) bodyEl.style.scrollBehavior = 'auto'
+    } catch {}
+    try {
+      topRef.current?.focus?.({ preventScroll: true })
+    } catch {}
+    try {
+      window.scrollTo(0, 0)
+    } catch {}
+    try {
+      topRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    } catch {}
+    try {
+      if (htmlEl) htmlEl.style.scrollBehavior = prevHtmlBehavior
+      if (bodyEl) bodyEl.style.scrollBehavior = prevBodyBehavior
+    } catch {}
+  }
+
+  useLayoutEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
+    // Wait for DOM updates so focus/scroll position doesn't snap back.
+    requestAnimationFrame(() => scrollToTop())
+  }, [currentPage])
 
   // Reset pagination to first page on search/filter changes
   useEffect(() => {
@@ -298,6 +338,7 @@ export default function PartsPicker() {
       return (
         <main className="min-h-screen bg-grey-100">
           <div className="container mx-auto px-4 py-16">
+            <div ref={topRef} tabIndex={-1} />
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading solar parts database...</p>
@@ -310,6 +351,7 @@ export default function PartsPicker() {
     return (
       <main className="min-h-screen bg-grey-100">
         <div className="container mx-auto px-4 py-16">
+          <div ref={topRef} tabIndex={-1} />
           <nav className="mb-8"></nav>
           <div className="rounded-xl shadow-lg p-6 border border-gray-100">
             <div className="text-center mb-12">
@@ -479,13 +521,15 @@ export default function PartsPicker() {
                     <p><span className="font-medium">Made in:</span> {part.manufacturer}</p>
                     <div className="flex gap-12 pt-4">
                       <button
-                        onClick={() => router.push(`/parts/${part.sku}`)}
+                        onClick={() => router.push(`/parts?sku=${encodeURIComponent(part.sku)}`)}
                         className="flex-1 bg-[#0a4b8c] font-semibold text-white py-2 px-4 rounded-lg hover:bg-[#053e7f] transition-colors text-center"
                       >
                         View Details
                       </button>
                       <Link
-                        href="/compare"
+                        href={searchTerm
+                          ? `/compare?mode=parts&q=${encodeURIComponent(searchTerm)}`
+                          : `/compare?mode=parts&sku=${encodeURIComponent(part.sku)}`}
                         className="flex-1 bg-[#ffd700] text-black font-bold py-2 px-4 rounded-lg hover:bg-[#d1b200] transition-colors text-center"
                       >
                         Compare Parts
@@ -499,7 +543,10 @@ export default function PartsPicker() {
             {filteredParts.length > PARTS_PER_PAGE && (
               <div className="flex justify-center items-center gap-4 mb-8">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  onClick={(e) => {
+                    e.currentTarget.blur()
+                    setCurrentPage((p) => Math.max(1, p - 1))
+                  }}
                   disabled={currentPage === 1}
                   className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
                 >
@@ -507,7 +554,10 @@ export default function PartsPicker() {
                 </button>
                 <span>Page {currentPage} of {totalPages}</span>
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={(e) => {
+                    e.currentTarget.blur()
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
                 >

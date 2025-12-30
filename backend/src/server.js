@@ -29,6 +29,7 @@ let aurora;
 try { aurora = makeAurora(); } catch (e) { console.warn("Aurora client not initialized:", e.message); }
 
 const { buildComparison } = require("./compare");
+const { evaluateFeoc } = require('./feoc');
 
 const app = express();
 app.use(express.json());
@@ -238,6 +239,100 @@ app.get("/search", async (req, res) => {
       warning: "search_failed",
       detail: e.message,
     });
+  }
+});
+
+// ---------- single part lookup by SKU (query param, supports '/' in SKU) ----------
+app.get('/parts/lookup', async (req, res) => {
+  const sku = req.query.sku?.toString().trim().slice(0, 200);
+  if (!sku) return res.status(400).json({ type: 'about:blank', title: 'invalid_parameter', param: 'sku' });
+  try {
+    const p = await prisma.part.findUnique({ where: { sku } });
+    if (!p) return res.status(404).json({ type: 'about:blank', title: 'not_found', detail: 'part not found' });
+    return res.json({
+      sku: p.sku,
+      name: p.name,
+      unit_price: p.unitPrice,
+      origin_country: p.originCountry,
+      is_domestic: p.isDomestic,
+      weight_kg: p.weightKg,
+    });
+  } catch (e) {
+    return res.status(500).json({ type: 'about:blank', title: 'part_lookup_failed', detail: e.message });
+  }
+});
+
+// ---------- parts: compare similar parts by SKU ----------
+function inferPartCategory(text) {
+  const s = (text || '').toLowerCase();
+  if (s.includes('panel') || s.includes('module')) return 'modules';
+  if (s.includes('microinverter') || s.includes('inverter')) return 'inverters';
+  if (s.includes('battery')) return 'batteries';
+  if (s.includes('racking') || s.includes('mount') || s.includes('rail') || s.includes('rack')) return 'racking';
+  if (s.includes('breaker')) return 'breakers';
+  return 'other';
+}
+function categoryKeywords(category) {
+  switch (category) {
+    case 'modules': return ['panel', 'module'];
+    case 'inverters': return ['inverter', 'microinverter'];
+    case 'batteries': return ['battery'];
+    case 'racking': return ['racking', 'mount', 'rail', 'rack'];
+    case 'breakers': return ['breaker'];
+    default: return [];
+  }
+}
+
+app.get('/parts/compare', async (req, res) => {
+  const sku = req.query.sku?.toString().trim().slice(0, 200) || null;
+  const q = req.query.q?.toString().trim().slice(0, 200) || null;
+  if (!sku && !q) return res.status(400).json({ type: 'about:blank', title: 'invalid_parameter', detail: 'sku or q is required' });
+  const limit = getIntParam(req, res, 'limit', { min: 1, max: 200, def: 50 }); if (limit == null) return;
+  try {
+    const all = await prisma.part.findMany({ orderBy: { sku: 'asc' } });
+
+    let selectedSku = null;
+    let category = 'other';
+    let needle = null;
+
+    if (sku) {
+      const base = all.find((p) => p.sku === sku) || null;
+      if (!base) return res.status(404).json({ type: 'about:blank', title: 'not_found', detail: 'part not found' });
+      selectedSku = base.sku;
+      category = inferPartCategory(`${base.sku} ${base.name}`);
+      needle = null;
+    } else {
+      needle = q;
+      category = inferPartCategory(q);
+    }
+
+    const needleLower = needle ? needle.toLowerCase() : null;
+    const items = all
+      .filter((p) => {
+        const cat = inferPartCategory(`${p.sku} ${p.name}`);
+        if (category !== 'other') return cat === category;
+        if (!needleLower) return true;
+        const hay = `${p.sku} ${p.name}`.toLowerCase();
+        return hay.includes(needleLower);
+      })
+      .map((p) => ({
+        sku: p.sku,
+        name: p.name,
+        unit_price: p.unitPrice,
+        origin_country: p.originCountry,
+        is_domestic: p.isDomestic,
+        weight_kg: p.weightKg,
+      }))
+      .sort((a, b) => {
+        const ap = Number.isFinite(Number(a.unit_price)) ? Number(a.unit_price) : Number.POSITIVE_INFINITY;
+        const bp = Number.isFinite(Number(b.unit_price)) ? Number(b.unit_price) : Number.POSITIVE_INFINITY;
+        return ap - bp;
+      })
+      .slice(0, limit);
+
+    return res.json({ selected_sku: selectedSku, category, items });
+  } catch (e) {
+    return res.status(500).json({ type: 'about:blank', title: 'parts_compare_failed', detail: e.message });
   }
 });
 
@@ -678,10 +773,48 @@ app.get("/compare/projects", async (req, res) => {
             };
           })
         );
+        // Derive optional archive/sales fields to match FE card format without changing FE
+        const first = summaries[0] || {};
+        const ppwVal = Number(first.ppw) || null;
+        const priceVal = Number(first.base_system_price) || null;
+        const sizeKw = ppwVal && priceVal ? Number((priceVal / ppwVal / 1000).toFixed(1)) : null;
+        const taxCredit = priceVal ? Math.round(priceVal * 0.30) : null;
+
+        // Rebuild the first design comparison to compute FEOC consistently.
+        let feoc = null;
+        let domesticPct = null;
+        let totals = first.totals || null;
+        if (first.design_id) {
+          const raw = await getDesignPricingCached(first.design_id, 300000);
+          const cmp = await buildComparison(raw);
+          totals = cmp.summary;
+          const feocEval = evaluateFeoc({
+            items: cmp.items,
+            installationYear: new Date().getFullYear(),
+            maxNetOutputMW: sizeKw == null ? null : (sizeKw / 1000),
+          });
+          feoc = feocEval?.compliance?.feocCompliant ?? null;
+          // Only surface a domesticContent percent if evaluator computed it (no unknown manufactured costs)
+          domesticPct = feocEval?.percentages?.manufactured_domestic_percent ?? null;
+        }
+
         return {
           project_id: p.id,
           project_name: p.name,
           designs: summaries,
+          totals: first.totals || null,
+          // Optional fields for Project Archives cards (FE uses fallbacks if undefined)
+          customerName: p.name || null,
+          projectType: 'residential',
+          systemSize: sizeKw,
+          totalCost: priceVal,
+          domesticContent: domesticPct,
+          feocCompliant: feoc,
+          taxCreditAmount: taxCredit,
+          profitMargin: null,
+          completedDate: (p?.updated_at || p?.created_at) ? new Date(p.updated_at || p.created_at).toISOString().slice(0, 10) : null,
+          location: null,
+          status: 'completed',
         };
       })
     );
@@ -708,6 +841,69 @@ app.get("/compare/projects", async (req, res) => {
   }
 });
 
+// ---------- compare: find matching design(s) by part SKU ----------
+app.get('/compare/find-by-sku', rateLimit(30, 60_000), async (req, res) => {
+  try {
+    if (!aurora) throw new Error('Aurora not initialized');
+    const sku = req.query.sku?.toString().trim().slice(0, 100);
+    if (!sku) return res.status(400).json({ type: 'about:blank', title: 'invalid_parameter', param: 'sku' });
+
+    const page = getIntParam(req, res, 'page', { min: 1, max: 100000, def: 1 }); if (page == null) return;
+    const per_page = getIntParam(req, res, 'per_page', { min: 1, max: 50, def: 25 }); if (per_page == null) return;
+    const designs_per_project = getIntParam(req, res, 'designs_per_project', { min: 1, max: 5, def: 2 }); if (designs_per_project == null) return;
+    const limit = getIntParam(req, res, 'limit', { min: 1, max: 25, def: 5 }); if (limit == null) return;
+
+    const skuLower = sku.toLowerCase();
+    const cacheKey = `cmp:find_sku:${skuLower}:p${page}:pp${per_page}:dpp${designs_per_project}:l${limit}`;
+    if (!app.locals.compareSkuCache) app.locals.compareSkuCache = new Map();
+    const cacheRec = app.locals.compareSkuCache.get(cacheKey);
+    if (cacheRec && cacheRec.expires > Date.now()) {
+      res.setHeader('X-Compare-Cache', 'HIT');
+      return res.json(cacheRec.payload);
+    }
+
+    const proj = await aurora.listProjects({ page, per_page });
+    const matches = [];
+
+    for (const p of proj.items) {
+      if (matches.length >= limit) break;
+      const d = await aurora.listDesigns(p.id, { page: 1, per_page: designs_per_project });
+      for (const z of d.items) {
+        if (matches.length >= limit) break;
+        const raw = await getDesignPricingCached(z.id, 300000);
+        const cmp = await buildComparison(raw);
+        const hasSku = (cmp.items || []).some((it) => String(it?.matched_sku || '').toLowerCase() === skuLower);
+        if (!hasSku) continue;
+        matches.push({
+          project_id: p.id,
+          project_name: p.name || null,
+          design_id: z.id,
+          design_name: z.name || null,
+        });
+      }
+    }
+
+    const payload = {
+      sku,
+      found: matches.length > 0,
+      matches,
+      searched: { page: proj.page, per_page: proj.per_page, designs_per_project },
+      cache_ttl_ms: 30000,
+    };
+    app.locals.compareSkuCache.set(cacheKey, { payload, expires: Date.now() + 30_000 });
+    res.setHeader('X-Compare-Cache', 'MISS');
+    return res.json(payload);
+  } catch (e) {
+    return res.status(apiStatus(e)).json({
+      type: 'about:blank',
+      title: 'compare_find_by_sku_failed',
+      status: apiStatus(e),
+      detail: safeDetail(e),
+      request_id: req.requestId,
+    });
+  }
+});
+
 // ---------- compare single design ----------
 app.get("/compare/:designId", async (req, res) => {
   try {
@@ -719,6 +915,17 @@ app.get("/compare/:designId", async (req, res) => {
     const p = raw && raw.pricing ? raw.pricing : raw;
 
     const cmp = await buildComparison(raw);
+    const year = req.query?.year ? Number(req.query.year) : new Date().getFullYear();
+    const maxNetOutputMW = req.query?.max_net_output_mw != null ? Number(req.query.max_net_output_mw) : null;
+    const constructionStartDate = req.query?.construction_start_date ?? null;
+    const prevailingWageCompliant = req.query?.prevailing_wage_compliant ?? null;
+    const feoc = evaluateFeoc({
+      items: cmp.items,
+      installationYear: year,
+      maxNetOutputMW,
+      constructionStartDate,
+      prevailingWageCompliant,
+    });
 
     res.json({
       design_id: req.params.designId,
@@ -728,12 +935,152 @@ app.get("/compare/:designId", async (req, res) => {
       incentives: p.incentives ?? [],
       component_count: Array.isArray(p?.pricing_by_component) ? p.pricing_by_component.length : 0,
       preview_url: meta?.preview_url ?? null,
+      feoc,
       ...cmp, // { items, summary }
     });
   } catch (e) {
     res.status(apiStatus(e)).json({
       type: "about:blank",
       title: "compare_failed",
+      status: apiStatus(e),
+      detail: safeDetail(e),
+      request_id: req.requestId,
+    });
+  }
+});
+
+// ---------- FEOC evaluate (IRS-style, cost-based) ----------
+app.post('/feoc/evaluate', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    const project = req.body?.project || {};
+    const year = project.installationYear ?? project.year ?? new Date().getFullYear();
+    const result = evaluateFeoc({
+      items,
+      installationYear: year,
+      maxNetOutputMW: project.maxNetOutput ?? project.maxNetOutputMW ?? project.maxNetOutputMw ?? null,
+      constructionStartDate: project.constructionStartDate ?? null,
+      prevailingWageCompliant: project.prevailingWageCompliant ?? null,
+    });
+    return res.json(result);
+  } catch (e) {
+    return res.status(500).json({
+      type: 'about:blank',
+      title: 'feoc_evaluate_failed',
+      status: 500,
+      detail: safeDetail(e),
+      request_id: req.requestId,
+    });
+  }
+});
+
+// ---------- archives projects (card-friendly payload) ----------
+app.get("/archives/projects", async (req, res) => {
+  try {
+    if (!aurora) throw new Error("Aurora not initialized");
+    const page = getIntParam(req, res, 'page', { min: 1, max: 100000, def: 1 }); if (page == null) return;
+    const per_page = getIntParam(req, res, 'per_page', { min: 1, max: 50, def: 12 }); if (per_page == null) return;
+    const designs_per_project = 1; // for archives, just the first design summary
+
+    // Small cache for archives as well
+    const archKey = `arch:projects:p${page}:pp${per_page}`;
+    if (!app.locals.archivesCache) app.locals.archivesCache = new Map();
+    const archHit = app.locals.archivesCache.get(archKey);
+    if (archHit && archHit.expires > Date.now()) {
+      res.setHeader("X-Archives-Cache", "HIT");
+      return res.json(archHit.payload);
+    }
+
+    const proj = await aurora.listProjects({ page, per_page });
+
+    const items = await Promise.all(
+      proj.items.map(async (p) => {
+        const d = await aurora.listDesigns(p.id, { page: 1, per_page: designs_per_project });
+        const firstDesign = d.items[0];
+        let ppwVal = null, priceVal = null, totals = null, keyParts = [], cmpItems = null;
+        if (firstDesign) {
+          const raw = await getDesignPricingCached(firstDesign.id, 300000);
+          const pricing = raw && raw.pricing ? raw.pricing : raw;
+          const cmp = await buildComparison(raw);
+          ppwVal = Number(pricing?.price_per_watt) || null;
+          priceVal = Number(pricing?.system_price ?? pricing?.system_cost) || null;
+          totals = cmp?.summary || null;
+          cmpItems = Array.isArray(cmp?.items) ? cmp.items : null;
+          // Build top key parts by highest line total (up to 3)
+          if (Array.isArray(cmp?.items)) {
+            keyParts = cmp.items
+              .slice()
+              .sort((a, b) => (b.line_total || 0) - (a.line_total || 0))
+              .slice(0, 3)
+              .map((x) => x.name)
+              .filter(Boolean);
+          }
+        }
+
+        const sizeKw = ppwVal && priceVal ? Number((priceVal / ppwVal / 1000).toFixed(1)) : null;
+        const taxCredit = priceVal ? Math.round(priceVal * 0.30) : null;
+
+        const completedDate = (p?.updated_at || p?.created_at)
+          ? new Date(p.updated_at || p.created_at).toISOString().slice(0, 10)
+          : null;
+        const year = completedDate ? new Date(completedDate).getFullYear() : new Date().getFullYear();
+        const maxOutputMW = sizeKw == null ? null : (sizeKw / 1000);
+
+        const feocEval = evaluateFeoc({
+          items: cmpItems,
+          installationYear: year,
+          maxNetOutputMW: maxOutputMW,
+        });
+
+        const domesticPct = feocEval?.percentages?.manufactured_domestic_percent ?? null;
+        const feoc = feocEval?.compliance?.feocCompliant ?? null;
+
+        return {
+          projectId: p.id,
+          projectName: p.name,
+          customerName: p.name || null,
+          projectType: 'residential',
+          systemSize: sizeKw,
+          totalCost: priceVal,
+          domesticContent: domesticPct,
+          feocCompliant: feoc,
+          taxCreditAmount: taxCredit,
+          profitMargin: null,
+          completedDate,
+          location: null,
+          status: 'completed',
+          keyParts,
+          complianceDetails: totals ? {
+            ...totals,
+            domesticContent: domesticPct,
+            feocCompliant: feoc,
+            steelIronCompliant: feocEval?.compliance?.steelIronCompliant ?? null,
+            manufacturedProductsCompliant: feocEval?.compliance?.manufacturedProductsCompliant ?? null,
+            requiredDomestic: feocEval?.inputs?.requiredManufacturedDomesticPercent ?? null,
+            projectEligible: feocEval?.eligibility?.eligible ?? null,
+            smallProject: feocEval?.eligibility?.reasons?.smallProject ?? null,
+            earlyConstruction: feocEval?.eligibility?.reasons?.earlyConstruction ?? null,
+            prevailingWageCompliant: feocEval?.eligibility?.reasons?.prevailingWage ?? null,
+            feocBreakdown: feocEval,
+          } : null,
+        };
+      })
+    );
+
+    const payload = {
+      page: proj.page,
+      per_page: proj.per_page,
+      has_more: proj.has_more,
+      items,
+      cache_ttl_ms: 30000,
+    };
+    app.locals.archivesCache.set(archKey, { payload, expires: Date.now() + 30_000 });
+    res.setHeader("X-Archives-Cache", "MISS");
+    return res.json(payload);
+  } catch (e) {
+    res.status(apiStatus(e)).json({
+      type: "about:blank",
+      title: "archives_projects_failed",
       status: apiStatus(e),
       detail: safeDetail(e),
       request_id: req.requestId,

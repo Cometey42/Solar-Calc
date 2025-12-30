@@ -38,6 +38,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/data:/app/data:ro
+      - ./backend/src:/app/src
+      - ./backend/scripts:/app/scripts:ro
 
   # Frontend
   frontend:
@@ -49,10 +51,18 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NEXT_PUBLIC_API_URL: "http://backend:3000"
+      NEXT_PUBLIC_API_URL: "http://localhost:3000"
       NODE_ENV: development
+    command: npm run dev
     depends_on:
       - backend
+    volumes:
+      # Mount source so code changes (like the dummy card) show up without rebuilding
+      - ./frontend/app:/app/app
+      - ./frontend/styles:/app/styles
+      - ./frontend/public:/app/public
+      - ./frontend/api.js:/app/api.js
+      - ./frontend/next.config.js:/app/next.config.js
 
 volumes:
   mysql_data:

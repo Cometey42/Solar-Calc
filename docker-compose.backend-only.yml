@@ -33,6 +33,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/data:/app/data:ro
+      - ./backend/src:/app/src
+      - ./backend/scripts:/app/scripts:ro
 
 volumes:
   mysql_data:

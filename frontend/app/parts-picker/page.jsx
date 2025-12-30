@@ -325,7 +325,7 @@ export default function PartsPicker() {
                       >
                         ✕
                       </button>
-                    )}
+                        onClick={() => router.push(`/parts?sku=${encodeURIComponent(part.sku)}`)}
                   </div>
                   {searchTerm && (
                     <p className="text-sm text-gray-600 mt-1">

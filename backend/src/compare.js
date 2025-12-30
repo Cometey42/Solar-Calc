@@ -1,6 +1,14 @@
 // src/compare.js
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { lookupMaterial } = require('./materialsCatalog');
+const { classifyFeocBucket } = require('./feoc');
+
+function isKnownOrigin(originCountry) {
+    if (originCountry == null) return false;
+    const s = String(originCountry).trim().toUpperCase();
+    return s !== '' && s !== 'UNKNOWN';
+}
 
 /**
  * Merge Aurora pricing_by_component with your Parts + mapping table.
@@ -32,20 +40,32 @@ async function buildComparison(pricingInput) {
             });
         }
 
-        const unitPrice = part?.unitPrice ?? null;
+        const materialFromName = lookupMaterial(r.name);
+        const materialFromMapped = mappedSku ? lookupMaterial(mappedSku) : null;
+        const materialFromPartSku = part?.sku ? lookupMaterial(part.sku) : null;
+        const material = materialFromMapped || materialFromPartSku || materialFromName;
+
+        const unitPrice = part?.unitPrice ?? material?.unitPrice ?? null;
         const qty = r.quantity ?? null;
         const lineTotal = unitPrice != null && qty != null ? unitPrice * qty : null;
+
+        // Prefer catalog domestic flag when present; otherwise treat DB isDomestic as reliable
+        // only if originCountry is not UNKNOWN (schema defaults can otherwise misclassify).
+        const partDomestic = part && isKnownOrigin(part.originCountry) ? part.isDomestic : null;
+        const isDomestic = (material?.isDomestic ?? partDomestic) ?? null;
+        const originCountry = material?.originCountry ?? (isKnownOrigin(part?.originCountry) ? part.originCountry : null);
 
         out.push({
             name: r.name,
             manufacturer: r.manufacturer_name,
             type: r.component_type,
             quantity: qty,
-            matched_sku: part?.sku ?? null,
+            matched_sku: part?.sku ?? material?.sku ?? null,
             unit_price: unitPrice,
-            is_domestic: part?.isDomestic ?? null,
-            origin_country: part?.originCountry ?? null,
+            is_domestic: isDomestic,
+            origin_country: originCountry,
             line_total: lineTotal,
+            feoc_bucket: classifyFeocBucket({ name: r.name, type: r.component_type }),
         });
     }
 

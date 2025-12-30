@@ -1,16 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { fetchProjects, fetchDesignDetails } from '../../api';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { fetchArchiveProjects } from '../../api';
 
 export default function ProjectArchives() {
+  const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  
-  // Filter states
+
+  const formatCurrency = (value) => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return 'N/A';
+    return `$${n.toLocaleString()}`;
+  };
+
+  const formatPercent = (value) => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return 'N/A';
+    return `${n}%`;
+  };
+
+  // Filters
   const [filters, setFilters] = useState({
     systemSize: '',
     projectType: 'all',
@@ -24,147 +38,77 @@ export default function ProjectArchives() {
   const [totalPages, setTotalPages] = useState(1);
   const PROJECTS_PER_PAGE = 12;
 
-  // Load past projects
+  // Load archived projects
   useEffect(() => {
+    // Prefetch FEOC route to make navigation instant
+    try { router?.prefetch?.('/feoc-calculator'); } catch {}
+
     const loadProjects = async () => {
       try {
         setIsLoading(true);
-        const data = await fetchProjects({ page: currentPage, perPage: 50 });
-        
-        // Mock additional data for demonstration - in real implementation this would come from your backend
-        const enhancedProjects = (data.projects || data.items || []).map((project, index) => {
-          const systemSize = project.systemSize || (Math.random() * 20 + 5).toFixed(1);
-          const projectType = project.projectType || (Math.random() > 0.7 ? 'commercial' : 'residential');
-          const domesticContent = project.domesticContent || Math.floor(Math.random() * 60 + 20); // 20-80%
-          
-          // Generate realistic key parts with logical domestic/foreign ratios
-          const keyParts = project.keyParts || [
-            { 
-              type: 'Solar Panels', 
-              count: Math.floor(Math.random() * 30 + 10), 
-              domestic: domesticContent > 50 // Panels follow overall domestic trend
-            },
-            { 
-              type: 'Inverter', 
-              count: Math.floor(Math.random() * 3 + 1), 
-              domestic: domesticContent > 40 // Inverters slightly more likely to be foreign
-            },
-            { 
-              type: 'Racking', 
-              count: 1, 
-              domestic: domesticContent > 30 // Steel/iron requirements stricter
-            }
-          ];
+        // Fetch a larger batch once to allow client-side pagination
+        // Backend caps per_page at 50.
+        const data = await fetchArchiveProjects({ page: 1, perPage: 50 });
+        const source = data.items || data.projects || [];
 
-          // Calculate FEOC compliance based on actual 2025 IRS rules
-          const steelIronDomestic = keyParts.find(p => p.type === 'Racking')?.domestic || false;
-          const steelIronCompliant = steelIronDomestic; // Must be 100% US for steel/iron
-          const manufacturedProductsCompliant = domesticContent >= 45; // 45% minimum for 2025
-          
-          // Project eligibility (most residential <1MW auto-qualify)
-          const systemSizeNum = parseFloat(systemSize);
-          const projectEligible = systemSizeNum < 1 || projectType === 'residential' || Math.random() > 0.3;
-          
-          // Final FEOC compliance = content compliance + project eligibility
-          const feocCompliant = steelIronCompliant && manufacturedProductsCompliant && projectEligible;
-
-          return {
-            ...project,
-            // Enhanced fields for sales evaluation
-            projectId: project.id || `proj_${Math.random().toString(36).substr(2, 9)}`,
-            customerName: project.customerName || `Customer ${Math.floor(Math.random() * 1000)}`,
-            systemSize,
-            totalCost: project.totalCost || Math.floor(Math.random() * 40000 + 20000), // $20k-60k
-            projectType,
-            feocCompliant, // NOW LOGICALLY CALCULATED
-            domesticContent,
-            taxCreditAmount: project.taxCreditAmount || Math.floor(Math.random() * 20000 + 5000),
-            profitMargin: project.profitMargin || (Math.random() * 15 + 10).toFixed(1), // 10-25%
-            completedDate: project.completedDate || new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            location: project.location || ['California', 'Texas', 'Florida', 'New York', 'Arizona'][Math.floor(Math.random() * 5)],
-            status: project.status || 'completed',
-            keyParts,
-            challenges: project.challenges || [
-              'FEOC compliance verification',
-              'Domestic content sourcing', 
-              'Installation timeline'
-            ][Math.floor(Math.random() * 3)],
-            successFactors: project.successFactors || [
-              'High domestic content achieved',
-              'Early customer engagement',
-              'Optimal part selection'
-            ],
-            // Add compliance details for transparency
-            complianceDetails: {
-              steelIronCompliant,
-              manufacturedProductsCompliant,
-              projectEligible,
-              requiredDomestic: 45 // 2025 requirement
-            }
-          };
-        });
-
-        setProjects(enhancedProjects);
-        setFilteredProjects(enhancedProjects);
-        setTotalPages(Math.ceil(enhancedProjects.length / PROJECTS_PER_PAGE));
-      } catch (error) {
-        console.error('Failed to load projects:', error);
-        // Fallback demo data
-        const demoProjects = Array.from({ length: 25 }, (_, i) => ({
-          projectId: `demo_${i + 1}`,
-          customerName: `Demo Customer ${i + 1}`,
-          systemSize: (Math.random() * 20 + 5).toFixed(1),
-          totalCost: Math.floor(Math.random() * 40000 + 20000),
-          projectType: Math.random() > 0.7 ? 'commercial' : 'residential',
-          feocCompliant: Math.random() > 0.3,
-          domesticContent: Math.floor(Math.random() * 60 + 20),
-          taxCreditAmount: Math.floor(Math.random() * 20000 + 5000),
-          profitMargin: (Math.random() * 15 + 10).toFixed(1),
-          completedDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          location: ['California', 'Texas', 'Florida', 'New York', 'Arizona'][Math.floor(Math.random() * 5)],
-          status: 'completed',
-          keyParts: [
-            { type: 'Solar Panels', count: Math.floor(Math.random() * 30 + 10), domestic: Math.random() > 0.5 },
-            { type: 'Inverter', count: Math.floor(Math.random() * 3 + 1), domestic: Math.random() > 0.4 },
-            { type: 'Racking', count: 1, domestic: Math.random() > 0.6 }
-          ],
-          challenges: ['FEOC compliance', 'Domestic sourcing', 'Timeline'][Math.floor(Math.random() * 3)],
-          successFactors: ['High domestic content', 'Early engagement', 'Optimal parts'][Math.floor(Math.random() * 3)]
+        const normalized = source.map((project) => ({
+          ...project,
+          projectId: String(project.projectId || project.id || project.project_id || ''),
+          customerName: String(project.customerName || project.name || project.projectName || project.projectName || ''),
+          location: project.location || 'Unknown',
+          status: project.status || 'completed',
+          systemSize: project.systemSize != null ? String(project.systemSize) : '',
+          totalCost: project.totalCost ?? null,
+          domesticContent: project.domesticContent ?? null,
+          feocCompliant: project.feocCompliant ?? null,
+          completedDate: project.completedDate ?? null,
+          keyParts: Array.isArray(project.keyParts) ? project.keyParts : [],
+          successFactors: Array.isArray(project.successFactors) ? project.successFactors : [],
+          challenges: project.challenges ?? '',
+          complianceDetails: project.complianceDetails ?? null,
         }));
-        setProjects(demoProjects);
-        setFilteredProjects(demoProjects);
-        setTotalPages(Math.ceil(demoProjects.length / PROJECTS_PER_PAGE));
+
+        setProjects(normalized);
+        setFilteredProjects(normalized);
+        setTotalPages(Math.ceil(normalized.length / PROJECTS_PER_PAGE));
+      } catch (error) {
+        console.error('Failed to load archived projects:', error);
+        setProjects([]);
+        setFilteredProjects([]);
+        setTotalPages(1);
       } finally {
         setIsLoading(false);
       }
     };
-
     loadProjects();
-  }, [currentPage]);
+  }, []); // Run once on mount
 
   // Apply filters
   useEffect(() => {
     let filtered = projects.filter(project => {
-      const matchesSearch = !filters.searchTerm || 
+      const matchesSearch = !filters.searchTerm ||
         project.customerName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         project.location.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         project.projectId.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
-      const matchesSystemSize = !filters.systemSize || 
+      const matchesSystemSize = !filters.systemSize || (
         parseFloat(project.systemSize) >= parseFloat(filters.systemSize) - 2 &&
-        parseFloat(project.systemSize) <= parseFloat(filters.systemSize) + 2;
+        parseFloat(project.systemSize) <= parseFloat(filters.systemSize) + 2
+      );
 
-      const matchesProjectType = filters.projectType === 'all' || 
-        project.projectType === filters.projectType;
+      const matchesProjectType = filters.projectType === 'all' || project.projectType === filters.projectType;
 
       const matchesFeoc = filters.feocCompliant === 'all' ||
-        (filters.feocCompliant === 'compliant' && project.feocCompliant) ||
-        (filters.feocCompliant === 'non-compliant' && !project.feocCompliant);
+        (filters.feocCompliant === 'compliant' && project.feocCompliant === true) ||
+        (filters.feocCompliant === 'non-compliant' && project.feocCompliant === false);
+
+      const totalCostNum = typeof project.totalCost === 'number' ? project.totalCost : Number(project.totalCost);
+      const hasTotalCost = Number.isFinite(totalCostNum);
 
       const matchesPriceRange = filters.priceRange === 'all' ||
-        (filters.priceRange === 'under-30k' && project.totalCost < 30000) ||
-        (filters.priceRange === '30k-50k' && project.totalCost >= 30000 && project.totalCost <= 50000) ||
-        (filters.priceRange === 'over-50k' && project.totalCost > 50000);
+        (filters.priceRange === 'under-30k' && hasTotalCost && totalCostNum < 30000) ||
+        (filters.priceRange === '30k-50k' && hasTotalCost && totalCostNum >= 30000 && totalCostNum <= 50000) ||
+        (filters.priceRange === 'over-50k' && hasTotalCost && totalCostNum > 50000);
 
       return matchesSearch && matchesSystemSize && matchesProjectType && matchesFeoc && matchesPriceRange;
     });
@@ -174,15 +118,75 @@ export default function ProjectArchives() {
     setCurrentPage(1);
   }, [filters, projects]);
 
-  // Get paginated projects
   const paginatedProjects = filteredProjects.slice(
     (currentPage - 1) * PROJECTS_PER_PAGE,
     currentPage * PROJECTS_PER_PAGE
   );
 
-  const handleProjectSelect = async (project) => {
+  const handleProjectSelect = (project) => {
     setSelectedProject(project);
     setShowDetails(true);
+  };
+
+  const handleUseTemplate = () => {
+    try {
+      // Diagnostic to confirm click handler fired
+      console.log('[Archives] Use as Template clicked');
+      const designFromProject = selectedProject ? (() => {
+        const items = (selectedProject.keyParts || []).map((part) => ({
+          name: part.type,
+          manufacturer: part.manufacturer || 'Unknown',
+          type: part.type?.toLowerCase(),
+          quantity: part.count ?? 1,
+            unit_price: part.unit_price ?? null,
+          matched_sku: part.sku ?? null,
+          origin_country: part.domestic ? 'US' : 'CN',
+          is_domestic: !!part.domestic,
+        }));
+        const component_count = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+        return {
+          design_id: selectedProject.projectId,
+          pricing_method: 'template',
+          component_count,
+          summary: `Template generated from archived project ${selectedProject.customerName}`,
+          items,
+        };
+      })() : null;
+
+      const payload = {
+        project: selectedProject ? {
+          projectId: selectedProject.projectId,
+          customerName: selectedProject.customerName,
+          projectType: selectedProject.projectType,
+          location: selectedProject.location,
+          completedDate: selectedProject.completedDate,
+          systemSize: selectedProject.systemSize,
+          totalCost: selectedProject.totalCost,
+          profitMargin: selectedProject.profitMargin,
+          domesticContent: selectedProject.domesticContent,
+          taxCreditAmount: selectedProject.taxCreditAmount,
+          feocCompliant: selectedProject.feocCompliant,
+          maxNetOutput: (parseFloat(selectedProject.systemSize) / 1000) || null,
+          constructionStartDate: selectedProject.constructionStartDate || null,
+          prevailingWageCompliant: selectedProject.prevailingWageCompliant || false,
+        } : null,
+        design: designFromProject,
+      };
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('feocTemplate', JSON.stringify(payload));
+      }
+      // Navigate after ensuring localStorage write has completed
+      setTimeout(() => {
+        try {
+          router.push('/feoc-calculator');
+        } catch (navErr) {
+          console.warn('[Archives] router.push failed, falling back to location.href', navErr);
+          if (typeof window !== 'undefined') window.location.href = '/feoc-calculator';
+        }
+      }, 0);
+    } catch (e) {
+      console.error('Failed to set template for FEOC calculator', e);
+    }
   };
 
   if (isLoading) {
@@ -192,6 +196,7 @@ export default function ProjectArchives() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading project archives...</p>
+            <p className="text-[11px] text-gray-400 mt-2">Debug marker: dummy compliant card enabled</p>
           </div>
         </div>
       </main>
@@ -205,6 +210,7 @@ export default function ProjectArchives() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#053e7f] mb-2">Project Archives</h1>
           <p className="text-gray-600">Reference past successful projects for feasibility analysis</p>
+          <p className="text-[11px] text-gray-400">Debug marker: dummy compliant card enabled</p>
         </div>
 
         {/* Filters */}
@@ -306,27 +312,27 @@ export default function ProjectArchives() {
               className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-2 hover:border-blue-300"
             >
               <div className="p-6">
-                {/* Project Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">{project.customerName}</h3>
                     <p className="text-sm text-gray-500">{project.location}</p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    project.feocCompliant 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {project.feocCompliant ? 'FEOC ✓' : 'FEOC ✗'}
+                    project.feocCompliant === true
+                      ? 'bg-green-100 text-green-800'
+                      : project.feocCompliant === false
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`} title={`SI:${project.complianceDetails?.steelIronCompliant} MP:${project.complianceDetails?.manufacturedProductsCompliant} PE:${project.complianceDetails?.projectEligible}`}>
+                    {project.feocCompliant === true ? 'FEOC ✓' : project.feocCompliant === false ? 'FEOC ✗' : 'FEOC ?'}
                   </span>
                 </div>
 
-                {/* Key Metrics */}
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500">System Size</p>
-                      <p className="font-semibold">{project.systemSize} kW</p>
+                      <p className="font-semibold">{project.systemSize ? `${project.systemSize} kW` : 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Project Type</p>
@@ -337,34 +343,37 @@ export default function ProjectArchives() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500">Total Cost</p>
-                      <p className="font-bold text-green-600">${project.totalCost.toLocaleString()}</p>
+                      <p className="font-bold text-green-600">{formatCurrency(project.totalCost)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Profit Margin</p>
-                      <p className="font-bold text-blue-600">{project.profitMargin}%</p>
+                      <p className="font-bold text-blue-600">{formatPercent(project.profitMargin)}</p>
                     </div>
                   </div>
 
                   <div className="text-sm">
                     <p className="text-gray-500">Domestic Content</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          project.domesticContent >= 40 ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}
-                        style={{ width: `${Math.min(project.domesticContent, 100)}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">{project.domesticContent}% domestic</p>
+                    {Number.isFinite(Number(project.domesticContent)) ? (
+                      <>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                          <div
+                            className={`h-2 rounded-full ${Number(project.domesticContent) >= 40 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                            style={{ width: `${Math.min(Number(project.domesticContent), 100)}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">{Number(project.domesticContent)}% domestic</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-600 mt-1">N/A</p>
+                    )}
                   </div>
 
                   <div className="text-sm">
                     <p className="text-gray-500">Customer Tax Credit</p>
-                    <p className="font-bold text-purple-600">${project.taxCreditAmount.toLocaleString()}</p>
+                    <p className="font-bold text-purple-600">{formatCurrency(project.taxCreditAmount)}</p>
                   </div>
                 </div>
 
-                {/* View Details Button */}
                 <div className="mt-4 pt-4 border-t">
                   <button className="w-full bg-[#053e7f] text-white py-2 rounded-lg hover:bg-[#042c5a] transition-colors font-medium">
                     View Full Details
@@ -375,7 +384,6 @@ export default function ProjectArchives() {
           ))}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mb-8">
             <button
@@ -396,7 +404,6 @@ export default function ProjectArchives() {
           </div>
         )}
 
-        {/* No Results */}
         {filteredProjects.length === 0 && (
           <div className="text-center py-12 bg-white rounded-xl shadow">
             <div className="text-4xl mb-4">📂</div>
@@ -406,7 +413,6 @@ export default function ProjectArchives() {
         )}
       </div>
 
-      {/* Project Details Modal */}
       {showDetails && selectedProject && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -426,14 +432,13 @@ export default function ProjectArchives() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Project Overview */}
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-blue-900 mb-2">Project Details</h3>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">System Size:</span> {selectedProject.systemSize} kW</p>
                     <p><span className="font-medium">Type:</span> {selectedProject.projectType}</p>
-                    <p><span className="font-medium">Total Cost:</span> ${selectedProject.totalCost.toLocaleString()}</p>
+                    <p><span className="font-medium">Total Cost:</span> {formatCurrency(selectedProject.totalCost)}</p>
                     <p><span className="font-medium">Project ID:</span> {selectedProject.projectId}</p>
                   </div>
                 </div>
@@ -441,19 +446,19 @@ export default function ProjectArchives() {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-green-900 mb-2">Financial Performance</h3>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Profit Margin:</span> {selectedProject.profitMargin}%</p>
-                    <p><span className="font-medium">Customer Tax Credit:</span> ${selectedProject.taxCreditAmount.toLocaleString()}</p>
-                    <p><span className="font-medium">Domestic Content:</span> {selectedProject.domesticContent}%</p>
-                    <p><span className="font-medium">FEOC Status:</span> {selectedProject.feocCompliant ? 'Compliant' : 'Non-Compliant'}</p>
+                    <p><span className="font-medium">Profit Margin:</span> {formatPercent(selectedProject.profitMargin)}</p>
+                    <p><span className="font-medium">Customer Tax Credit:</span> {formatCurrency(selectedProject.taxCreditAmount)}</p>
+                    <p><span className="font-medium">Domestic Content:</span> {formatPercent(selectedProject.domesticContent)}</p>
+                    <p><span className="font-medium">FEOC Status:</span> {selectedProject.feocCompliant === true ? 'Compliant' : selectedProject.feocCompliant === false ? 'Non-Compliant' : 'Unknown'}</p>
                   </div>
                 </div>
 
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-purple-900 mb-2">Key Components</h3>
                   <div className="space-y-2 text-sm">
-                    {selectedProject.keyParts.map((part, index) => (
+                    {(Array.isArray(selectedProject.keyParts) ? selectedProject.keyParts : []).map((part, index) => (
                       <p key={index}>
-                        <span className="font-medium">{part.type}:</span> {part.count}x 
+                        <span className="font-medium">{part.type}:</span> {part.count}x
                         <span className={`ml-1 ${part.domestic ? 'text-green-600' : 'text-red-600'}`}>
                           ({part.domestic ? 'Domestic' : 'Foreign'})
                         </span>
@@ -463,19 +468,22 @@ export default function ProjectArchives() {
                 </div>
               </div>
 
-              {/* Success Factors & Challenges */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">✅ Success Factors</h3>
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <ul className="text-sm space-y-1">
-                      {selectedProject.successFactors.map((factor, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="text-green-500 mr-2">•</span>
-                          {factor}
-                        </li>
-                      ))}
-                    </ul>
+                    {(Array.isArray(selectedProject.successFactors) ? selectedProject.successFactors : []).length ? (
+                      <ul className="text-sm space-y-1">
+                        {(Array.isArray(selectedProject.successFactors) ? selectedProject.successFactors : []).map((factor, index) => (
+                          <li key={index} className="flex items-start">
+                            <span className="text-green-500 mr-2">•</span>
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-600">N/A</p>
+                    )}
                   </div>
                 </div>
 
@@ -485,20 +493,16 @@ export default function ProjectArchives() {
                     <ul className="text-sm space-y-1">
                       <li className="flex items-start">
                         <span className="text-yellow-500 mr-2">•</span>
-                        {selectedProject.challenges}
+                        {selectedProject.challenges || 'N/A'}
                       </li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-4 pt-4 border-t">
-                <button className="flex-1 bg-[#053e7f] text-white py-3 rounded-lg hover:bg-[#042c5a] transition-colors font-medium">
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUseTemplate(); }} className="flex-1 bg-[#053e7f] text-white py-3 rounded-lg hover:bg-[#042c5a] transition-colors font-medium">
                   Use as Template
-                </button>
-                <button className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium">
-                  Export Details
                 </button>
                 <button
                   onClick={() => setShowDetails(false)}

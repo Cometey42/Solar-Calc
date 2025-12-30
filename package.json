@@ -9,6 +9,7 @@
     "install:backend": "cd backend && npm install",
     "install:frontend": "cd frontend && npm install",
     "install:all": "npm run install:backend && npm run install:frontend",
+    "test": "cd frontend && npm test",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

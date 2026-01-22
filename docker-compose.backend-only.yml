@@ -1,0 +1,40 @@
+version: "3.9"
+services:
+  db:
+    image: mysql:8.0
+    container_name: solar-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: solar_db
+      MYSQL_USER: solar_user
+      MYSQL_PASSWORD: solar_password
+    ports:
+      - "3307:3306" # host 3307 to avoid conflict with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solar-backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/data:/app/data:ro
+      - ./backend/src:/app/src
+      - ./backend/scripts:/app/scripts:ro
+
+volumes:
+  mysql_data:

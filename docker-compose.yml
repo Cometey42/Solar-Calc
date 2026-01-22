@@ -1,0 +1,68 @@
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: solar-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: solar_db
+      MYSQL_USER: solar_user
+      MYSQL_PASSWORD: solar_password
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Backend API
+  backend:
+    image: node:18-alpine
+    container_name: solar-backend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "mysql://solar_user:solar_password@db:3306/solar_db"
+      NODE_ENV: development
+      AURORA_TENANT_ID: "386d2b59-305c-4ab9-93a4-5ffb88f8f44b"
+      AURORA_API_TOKEN: "sk_prod_096d85b3745782b3468ae54b"
+      EMAIL_FROM: "${EMAIL_FROM}"
+      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+      # AURORA_RESTRICTED_TOKEN disabled - causes 403 errors on all endpoints
+      # Contact Aurora admin to grant restricted key access to /projects endpoint
+      # AURORA_RESTRICTED_TOKEN: "rk_prod_36afb727e9c4a8da74f05bb4"
+    command: sh -c "npm install && npx prisma generate && npm start"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Frontend
+  frontend:
+    image: node:18-alpine
+    container_name: solar-frontend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:3000"
+      NODE_ENV: development
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

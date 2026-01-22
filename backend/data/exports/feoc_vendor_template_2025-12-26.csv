@@ -1,0 +1,30 @@
+Your SKU / Part Number,Aurora Component Name (if different),Manufacturer,Part Type / Category,FEOC Bucket (Steel/Iron | Manufactured Product | Excluded),Unit Cost (USD) - REQUIRED,Currency,Domestic? (Y/N) - REQUIRED,Country of Manufacture - REQUIRED,For Steel/Iron: Mill Test Cert / Melt+Pour evidence (link or ref),For Manufactured Products: Domestic content % (if provided),FEOC Attestation (Y/N/Unknown),Attestation / Supporting Doc Link,Effective Date,Notes,Existing Source Label (from our sheet),Existing Price - Anthony,Existing Price - Curtis,Existing Notes (from our sheet)
+Stack SS-8,STACK SS-8,Solar Stack,Feet,Manufactured Product,,USD,Y,,,,,,,,Domestic,,,Each foot is one dot on the panels on the plan set
+IRIDG QM-HUG-01-M1,IRIDG QM-HUG-01-M1,,Feet,Manufactured Product,6.61,USD,N,,,,,,,,Non-Domestic,6.61,7.99,
+UNIRC SHBUTYLM2,UNIRC SHBUTYLM2,,Rail,Steel/Iron,,USD,N,,,,,,,,Non-Domestic,,,
+IRIDG XR-10-168M,IRIDG XR-10-168M,,Rail,Steel/Iron,26.04,USD,N,,,,,,,,Non-Domestic,26.04,35.61,must match or exceed the span of the panels. we can use a splice to put two rails together. panel length ans width varies and so do rail lenghts
+Unirac Domestic - 185RLM1-US,Unirac Domestic - 185RLM1-US,,Rail,Steel/Iron,,USD,Y,,,,,,,,Domestic,,,
+IRIDG UFO-CL-01-M1,Unirac Domestic - 185RLM1-US,,Mids,Manufactured Product,2.63,USD,,,,,,,,,,2.63,,mids go in in between every panel. Need one mid on each rail on the top and bottom in between panels. Mids are only needed for panels on the same rail
+Unirac Domestic - CCLAMPD1-US,Unirac Domestic - CCLAMPD1-US,,Ends,Manufactured Product,,USD,,,,,,,,,,,,
+IRIDG UFO-END-01-M1,IRIDG UFO-END-01-M1,,Ends,Manufactured Product,3.96,USD,,,,,,,,,,3.96,,"Ends go on the end of each rail. If we have a staggered layout and we set up multiple rails, we will need an end at the end each rail."
+Unirac - SHCLMPM2,Unirac - SHCLMPM2,,Stronghold Rail Clamp (Unirac),Steel/Iron,,USD,,,,,,,,,,,,only needed with Unirac and serves the same function as the rail bolts. Equivalent to the number of feet
+IRIDG XR10-BOSS-01-M1,IRIDG XR10-BOSS-01-M1,,Splices,Manufactured Product,5.03,USD,,,,,,,,,,5.03,,
+Unirac Domestic - RLSPLCM2-US,Unirac Domestic - RLSPLCM2-US,,Splices,Manufactured Product,,USD,,,,,,,,,,,,
+Unirac Domestic - MLPEMNT-US,Unirac Domestic - MLPEMNT-US,,MLPE Mount - UNIRAC,Steel/Iron,,USD,,,,,,,,,,,,only needed with Unirac and serves the same function as t bolts
+IRIDG XR-LUG-03-A1,IRIDG XR-LUG-03-A1,,MLPE Mount - UNIRAC,Steel/Iron,4.76,USD,,,,,,,,,,4.76,,Every rail gets one ground lug
+IRIDG BHW-TB-03-A1,IRIDG BHW-TB-03-A1,,Rail Bolts,Steel/Iron,1.7,USD,,,,,,,,,,1.7,,only needed with IronRidge. Equivalent to the number of feet
+IRIDG BHW-MI-01-A1,IRIDG BHW-MI-01-A1,,T Bolts,Manufactured Product,1.08,USD,,,,,,,,,,1.08,,only needed with IronRidge and serves the same function as the MLPE mount with Unirac
+IRIDG HW-RD1430-01-M1,IRIDG HW-RD1430-01-M1,,"3"" Mounting Screws",Steel/Iron,0.73,USD,,,,,,,,,,0.73,,6 x the number of feet
+IRIDG QM-BUG-01-M1,IRIDG QM-BUG-01-M1,,Conduit mount,Steel/Iron,0.73,USD,,,,,,,,,,0.73,,need a counduit pipe to connect each array. Need a mount to hold up the conduit anytime the roof plane changes. Will need one mount on both roof planes when the conduit is in a v shape. Will need 3 mounts when the conduit is bent in an A shape
+JINKO JKM425N-54HL4-B,JINKO JKM425N-54HL4-B,,Panels,Manufactured Product,146.39,USD,,,,,,,,,,146.39,158.31,
+HYUND HIS-T435NF(BK),HYUND HIS-T435NF(BK),,Panels,Manufactured Product,132.92,USD,,,,,,,,,,132.92,,
+QCELL Q.PEAK DUO BLK ML-G10+ 415,QCELL Q.PEAK DUO BLK ML-G10+ 415,,Panels,Manufactured Product,202.56,USD,Y,,,,,,,,Domestic,202.56,,
+QCELL Q.TRON BLK M-G2+/AC 430,QCELL Q.TRON BLK M-G2+/AC 430,,Panels,Manufactured Product,372.11,USD,N,,,,,,,,Non-Domestic,372.11,,
+QCELL Q.TRON BLK M-G2+ 435,QCELL Q.TRON BLK M-G2+ 435,,Panels,Manufactured Product,227.17,USD,N,,,,,,,,Non-Domestic,227.17,242.12,
+QCELL Q.TRON BLK M-G2.H+ 430,QCELL Q.TRON BLK M-G2.H+ 430,,Panels,Manufactured Product,224.56,USD,Y,,,,,,,,Domestic,224.56,,
+QCELL Q.TRON BLK M-G2.H+ 435,QCELL Q.TRON BLK M-G2.H+ 435,,Panels,Manufactured Product,241.67,USD,Y,,,,,,,,Domestic,241.67,,
+Enphase Combiner - IQ Combiner 5/5C - (comes with 15A breaker) - (ENP X-IQ-AM1-240-5C-HDK with cell kit compatibility and has Envoy Built into it),Enphase Combiner - IQ Combiner 5/5C - (comes with 15A breaker) - (ENP X-IQ-AM1-240-5C-HDK with cell kit compatibility and has Envoy Built into it),,Enphase Material,Manufactured Product,1063.21,USD,,,,,,,,,,,1063.21,
+ENP X-IQ-AM1-240-5-HDK,ENP X-IQ-AM1-240-5-HDK,,Enphase Material,Manufactured Product,617.36,USD,,,,,,,,,,617.36,686.31,Anything over 4 strings will need a load center instead of a combiner
+ENP CELLMODEM-M1-06-SP-05 LTE CAT M1 W/ 5-YR SPRINT,ENP CELLMODEM-M1-06-SP-05 LTE CAT M1 W/ 5-YR SPRINT,,Enphase Material,Manufactured Product,345.53,USD,,,,,,,,,,345.53,369.58,always 1 cell kit is needed
+ENP ENV2-IQ-AM1-240,ENP ENV2-IQ-AM1-240,,Enphase Material,Manufactured Product,492.39,USD,,,,,,,,,,,492.39,"comes with the combiner. If we are installing a load center, we will need to order an Envoy"
+IQ8HC-72-M-DOM-US (240V) (Domestic),IQ8HC-72-M-DOM-US (240V) (Domestic),,Enphase Material,Manufactured Product,236.9,USD,,,,,,,,,,,236.9,"comes with the combiner. If we are installing a load center, we will need to order an Envoy"

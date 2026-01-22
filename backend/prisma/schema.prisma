@@ -1,0 +1,31 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Part {
+  id            Int     @id @default(autoincrement())
+  sku           String  @unique
+  name          String
+  unitPrice     Float?
+  weightKg      Float?
+  originCountry String   @default("UNKNOWN")
+  isDomestic    Boolean  @default(false)
+
+  @@index([sku])
+  @@index([name])
+}
+
+model ComponentMap {
+  id           Int     @id @default(autoincrement())
+  auroraName   String
+  manufacturer String?
+  partSku      String
+
+  @@unique([auroraName, manufacturer])
+}

@@ -1,0 +1,181 @@
+{
+  "_metadata": {
+    "source": "Palmetto LightReach AVL Guide",
+    "last_updated": "2025-12-30",
+    "feoc_compliance_date": "2026-01-01",
+    "description": "Manufacturer to origin country mapping for FEOC compliance"
+  },
+  "feoc_countries": ["CN", "RU", "KP", "IR"],
+  "manufacturers": {
+    "Canadian Solar": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "JA Solar": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "Jinko": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "Longi": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "Maxeon": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31",
+      "note": "Previously SunPower, now controlled by Chinese entities"
+    },
+    "Trina": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "VSUN": {
+      "country": "CN",
+      "is_feoc": true,
+      "avl_status": "prohibited_2026",
+      "last_m1_date": "2025-12-31"
+    },
+    "Hyundai Energy Solutions": {
+      "country": "KR",
+      "is_feoc": false,
+      "avl_status": "approved_2026"
+    },
+    "Hyundai": {
+      "country": "KR",
+      "is_feoc": false,
+      "avl_status": "approved_2026",
+      "note": "Alias for Hyundai Energy Solutions"
+    },
+    "QCells": {
+      "country": "KR",
+      "is_feoc": false,
+      "avl_status": "approved_2026",
+      "note": "Owned by Hanwha (South Korea)"
+    },
+    "QCell": {
+      "country": "KR",
+      "is_feoc": false,
+      "avl_status": "approved_2026",
+      "note": "Alias for QCells"
+    },
+    "REC": {
+      "country": "NO",
+      "is_feoc": false,
+      "avl_status": "approved_2026",
+      "note": "Norway-based, some manufacturing in Singapore"
+    },
+    "Silfab": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026"
+    },
+    "Sirius": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026",
+      "note": "Manufactured by Elin"
+    },
+    "Mission": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026_preapproval_required"
+    },
+    "SEG": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026_preapproval_required"
+    },
+    "Enphase": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026",
+      "note": "US company, some manufacturing in Mexico/China (check model)"
+    },
+    "SolarEdge": {
+      "country": "IL",
+      "is_feoc": false,
+      "avl_status": "approved_2026",
+      "note": "Israeli company"
+    },
+    "Tesla": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026"
+    },
+    "Generac": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026"
+    },
+    "Franklin": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026_preapproval_required"
+    },
+    "IronRidge": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026",
+      "component_type": "racking"
+    },
+    "Unirac": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026",
+      "component_type": "racking"
+    },
+    "Solar Stack": {
+      "country": "US",
+      "is_feoc": false,
+      "is_domestic": true,
+      "avl_status": "approved_2026",
+      "component_type": "racking"
+    },
+    "SunPower": {
+      "country": "US",
+      "is_feoc": false,
+      "avl_status": "check_model",
+      "note": "Legacy US company, check specific models for current ownership"
+    },
+    "Waaree": {
+      "country": "IN",
+      "is_feoc": false,
+      "avl_status": "unknown",
+      "note": "India-based manufacturer"
+    }
+  },
+  "default_rules": {
+    "unknown_manufacturer": {
+      "country": "UNKNOWN",
+      "is_feoc": null,
+      "avl_status": "requires_verification"
+    },
+    "feoc_compliance_threshold": 0.0,
+    "note": "As of 2026, projects cannot have ANY FEOC content for compliance"
+  }
+}

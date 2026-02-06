@@ -84,7 +84,7 @@ export default function FEOCCalculator() {
     const loadParts = async () => {
       try {
         setIsLoading(true);
-        const { parts } = await fetchParts({ page: 1 });
+        const { parts } = await fetchParts({ page: 1, limit: 20 }); // Reduced from 50 to 20
         // Transform parts to include FEOC data
         const partsWithFEOC = parts.map(part => ({
           ...part,
@@ -116,7 +116,7 @@ export default function FEOCCalculator() {
   }, []);
 
   // Get FEOC compliance requirements (2026+: 0% FEOC allowed)
-  const getFEOCRequirement = () => {
+  const getFEOCRequirement = useCallback(() => {
     const year = parseInt(projectData.installationYear) || new Date().getFullYear();
     
     return {
@@ -124,7 +124,7 @@ export default function FEOCCalculator() {
       year: year,
       description: year >= 2026 
         ? 'FEOC Prohibited: 0% from China, Russia, N.Korea, Iran' 
-        : 'No FEOC Restrictions (Pre-2026)'    };  };
+        : 'No FEOC Restrictions (Pre-2026)'    };  }, [projectData.installationYear]);
 
   // Calculate FEOC compliance (foreign content only)
   const calculateFEOC = useCallback(async () => {

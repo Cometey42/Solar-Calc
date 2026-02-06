@@ -54,9 +54,10 @@ export function fetchDesignDetails(designId) {
     });
 }
 
-export async function fetchParts({ page = 1, parts = [], search = '' } = {}) {
+export async function fetchParts({ page = 1, parts = [], search = '', limit = 50 } = {}) {
   const query = search ? `&q=${encodeURIComponent(search)}` : '';
-  const response = await fetch(`${API_BASE_URL}/search?page=${page}&page_size=50${query}`);
+  const pageSize = Math.min(limit, 50); // Cap at 50 for performance
+  const response = await fetch(`${API_BASE_URL}/search?page=${page}&page_size=${pageSize}${query}`);
   
   if (response.ok) {
     const data = await response.json();
